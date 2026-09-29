@@ -8,6 +8,8 @@ data.
 This is not a per-ball live model. It predicts at four discrete checkpoints
 per match, not continuously after every delivery — see [Limitations](#limitations).
 
+**Run order:** `build_checkpoint_datasets.py` → `validate_temporal.py` → `app.py`.
+
 ---
 
 ## Data
@@ -18,8 +20,8 @@ Source: [Cricsheet](https://cricsheet.org/) IPL ball-by-ball data.
   (2008-04-18 to 2025-06-03).
 - `data/inplay_snapshots.csv` — one row per legal delivery of the second
   innings (the chase) for 1,164 of those matches: 133,903 rows. Built from
-  raw ball-by-ball data outside this repo (see [Known issues](#known-issues-and-history) —
-  this file replaces an earlier, buggy version).
+  raw ball-by-ball data outside this repo. This file replaces an earlier,
+  buggy version — see [Archive](#archive).
 - `data/checkpoint_{5,10,15,19}.csv` — one row per match at each checkpoint
   over (the last ball recorded in that over), built from the two files above
   by `build_checkpoint_datasets.py`, with `season` attached for temporal
@@ -92,7 +94,7 @@ same checkpoint data:
 - **Random split**: stratified 75/25 split (`random_state=42`), kept
   alongside the temporal split for comparison — this is the split an
   earlier version of this pipeline used exclusively (see
-  [Known issues](#known-issues-and-history)).
+  [Archive](#archive)).
 
 Metrics include a 1,000-sample bootstrap 95% CI. Test sets are small
 (110–144 matches per checkpoint), so treat CI width as a genuine
@@ -171,35 +173,21 @@ calibration plots: `figures/calibration_temporal_checkpoint_{5,10,15,19}.png`.
 
 ---
 
-## Known issues and history
+## Archive
 
-- **`data/inplay_snapshots.csv` was fixed.** An earlier committed version
-  computed each match's first-innings target as
-  `groupby(match_id)["runs_total"].max()` — the single biggest delivery in
-  the innings, not the innings total — so `target_runs` only ever took
-  values in {5, 6, 7, 8} and every feature derived from it was wrong. Fixed
-  in commit `d3d7469` — see `git log -- data/inplay_snapshots.csv` if that
-  history has since moved on.
-  `s9models.py` and `s10improveacc.py` still read the old buggy file's path
-  and have not been corrected or re-run; their outputs (including
-  `S9_*` / `S10_*` figures in `figures/` and `S10_model_comparison.csv`) are
-  stale and should not be cited. These are candidates for archiving rather
-  than fixing, since the checkpoint pipeline below supersedes them.
-- **`figures/win_probability_curve.png` is not a model output.** It's a
-  hardcoded illustrative array in `scripts/../graphs.py` (`win_prob = [50,
-  47, 42, ...]`), titled "Simulated" in the plot itself. Not a real result.
-- **`s9_models_Checkpointsv3_focused.py` does not currently run.** It reads
-  `checkpoint_{5,10,15,19}_fe.csv`, which don't exist — the script meant to
-  generate them (`s8c_Featureengineeringcheckpoints.py`) was never run to
-  completion (or its output was lost). Its "focused" feature set showed no
-  material AUC gain over baseline when tested via
-  `s9_models_Checkpointsv2.py`'s "improved" variant, so it isn't being
-  revived.
-- **`s9_models_Checkpointsv2.py` and `s9_models_Checkpointsv3_focused.py`
-  hardcode a path to the author's local machine** (`~/Documents/DSP`) and
-  won't run from a fresh clone. `build_checkpoint_datasets.py` and
-  `validate_temporal.py` use repo-relative paths and are the reproducible
-  versions of this pipeline.
+Scripts and figures that were superseded, broken, or fake have been moved to
+`archive/` (with git history preserved via `git mv`) rather than deleted or
+silently left in place. See [`archive/README.md`](archive/README.md) for
+exactly what's there and why each file was archived — including the
+`target_runs` bug that the old `data/inplay_snapshots.csv` had, and the
+hardcoded-fake `win_probability_curve.png`.
+
+Not everything broken has been archived: `s9_models_Checkpointsv3_focused.py`
+and `s9_models_Checkpointsv2.py` still exist at the repo root but are not
+part of the active pipeline — the former doesn't currently run (missing
+input files), and both hardcode a path to the author's local machine, so
+neither works from a fresh clone. `build_checkpoint_datasets.py` and
+`validate_temporal.py` are the reproducible replacements.
 
 ---
 
@@ -217,14 +205,17 @@ IPL-WInProbability_Project/
 │   └── validate_temporal_results.csv
 ├── build_checkpoint_datasets.py    # data/inplay_snapshots.csv + matches_clean.csv -> checkpoint CSVs
 ├── validate_temporal.py            # temporal + random split validation, this README's results table
+├── app.py                          # Streamlit dashboard
+├── requirements.txt
+├── archive/                        # superseded, broken, or fake — see archive/README.md
 ├── S1.py, S3.py, s3Mapping.py, s4Venue.py, s4venuedetect.py,
 │   S5B_FB.py, s5BuildMatch & ball-by-ball.py, s6_logR.py,
 │   s8.py, s8v2.py, s8checkpoints.py, s8c_Featureengineeringcheckpoints.py,
-│   s9models.py, s10improveacc.py, s9_models_Checkpointsv2.py,
-│   s9_models_Checkpointsv3_focused.py, s10_final_report_outputs.py,
-│   InventS2.py                     # original exploratory pipeline; several
+│   s9_models_Checkpointsv2.py, s9_models_Checkpointsv3_focused.py,
+│   s10_final_report_outputs.py, InventS2.py
+│                                    # original exploratory pipeline; several
 │                                    # hardcode local paths or read stale data
-│                                    # — see Known issues
+│                                    # — see Archive
 └── scripts/                        # early scaffold scripts, superseded by the above
 ```
 
